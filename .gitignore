@@ -1,0 +1,6 @@
+/target
+/pkg/README.md
+/pkg/package.json
+/pkg/tswasm_bg.wasm.d.ts
+/pkg/tswasm.d.ts
+

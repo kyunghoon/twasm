@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "jsx": "preserve",
+        "noEmit": true,
+        "strictFunctionTypes": true,
+        "sourceMap": true,
+        "strict": true,
+    }
+}

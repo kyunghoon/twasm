@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, cell::{Cell, RefCell, RefMut}, io::Write, rc::Rc, sync::{Arc, RwLock}};
+use std::{io::Write, sync::{Arc, RwLock}};
 use swc_ecma_parser::{Capturing, JscTarget, Parser, StringInput, Syntax, TsConfig, lexer::Lexer};
 use swc_common::{FileName, SourceMap, errors::{ColorConfig, Handler}, sync::Lrc};
 use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
@@ -45,7 +45,7 @@ impl Write for Buf {
     }
 }
 
-fn eval_ts(filename: &str, contents: &str) {
+fn eval_ts(filename: &str, contents: &str) -> Result<JsValue, JsValue> {
     let cm: Lrc<SourceMap> = Default::default();
     let handler = Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
 
@@ -102,17 +102,18 @@ fn eval_ts(filename: &str, contents: &str) {
     let elem = document.create_element("script").expect("failed to create script element");
     elem.set_inner_html(output);
     let head = document.head().expect("failed to get head element");
-    head.append_child(&elem).expect("failed to append child");
+    head.append_child(&elem)?;
+    Ok(JsValue::NULL)
 }
 
 #[wasm_bindgen]
-pub fn main(input: &str) {
-    eval_ts("index.ts", input);
+pub fn main(input: &str) -> Result<JsValue, JsValue> {
+    eval_ts("index.ts", input)?;
+    Ok(JsValue::NULL)
 }
 
 /*
 use web_sys::{RequestMode, RequestInit};
-
 
 #[wasm_bindgen]
 pub fn entrypoint(tspath: &str) {

@@ -1,2 +1,2 @@
-import { test } from './test';
-console.log('inside index.ts', test('11'));
+import { double, square } from './test';
+console.log('hello from index.ts! ', double('hello!'), square(5));

@@ -1,3 +1,2 @@
-export const test = (xx: string) => {
-    return 'test.ts test called with:' + xx
-}
+export const double = (str: string) => `${str}${str}`;
+export const square = (n: number) => n * n;

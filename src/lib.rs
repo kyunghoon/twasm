@@ -11,7 +11,7 @@ pub fn set_panic_hook() {
 
 use std::{io::Write, path::PathBuf, sync::{Arc, RwLock}};
 use swc_ecma_parser::{Capturing, JscTarget, Parser, StringInput, Syntax, TsConfig, lexer::Lexer};
-use swc_common::{FileName, Mark, SourceMap, errors::{ColorConfig, Handler}, sync::Lrc};
+use swc_common::{FileName, SourceMap, errors::{ColorConfig, Handler}, sync::Lrc};
 use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
 
 use swc_ecma_visit::FoldWith;
@@ -38,6 +38,9 @@ enum Error {
     IOError(std::io::Error),
     PoisonError(String),
     DiagnosticEmitted,
+    InvalidWindow,
+    InvalidDocument,
+    InvalidHead,
 }
 impl From<JsValue> for Error { fn from(e: JsValue) -> Error { Error::JSError(e) } }
 impl From<std::io::Error> for Error { fn from(e: std::io::Error) -> Error { Error::IOError(e) } }
@@ -45,6 +48,12 @@ impl From<swc_ecma_parser::error::Error> for Error { fn from(e: swc_ecma_parser:
 impl<T> From<std::sync::PoisonError<T>> for Error { fn from(e: std::sync::PoisonError<T>) -> Error { Error::PoisonError(e.to_string()) } }
 
 type Result<T> = std::result::Result<T, Error>;
+
+mod keyid {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static KEYID: AtomicU64 = AtomicU64::new(0);
+    pub fn new() -> u64 { KEYID.fetch_add(1, Ordering::SeqCst) }
+}
 
 #[derive(Debug, Clone)]
 struct Buf(Arc<RwLock<Vec<u8>>>);
@@ -58,7 +67,7 @@ impl Write for Buf {
     }
 }
 
-fn transpile(filename: &str, input: &str) -> Result<()> {
+fn transpile(filename: &str, input: &str) -> Result<u64> {
     swc_common::GLOBALS.set(&swc_common::Globals::new(), || {
         let cm: Lrc<SourceMap> = Default::default();
         let handler = Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
@@ -94,7 +103,8 @@ fn transpile(filename: &str, input: &str) -> Result<()> {
             .parse_typescript_module()
             .map_err(|e| { e.into_diagnostic(&handler).emit(); Error::DiagnosticEmitted })?
             .fold_with(&mut swc_ecma_transforms_typescript::strip())
-            .fold_with(&mut swc_ecma_transforms_module::umd::umd(cm.clone(), Mark::fresh(Mark::root()), Default::default()));
+            .fold_with(&mut swc_ecma_transforms_module::amd::amd(Default::default()));
+            //.fold_with(&mut swc_ecma_transforms_module::umd::umd(cm.clone(), Mark::fresh(Mark::root()), Default::default()));
 
         let mut wr = Buf(Arc::new(RwLock::new(vec![])));
 
@@ -111,24 +121,16 @@ fn transpile(filename: &str, input: &str) -> Result<()> {
         let code_output = wr.0.read()?;
         let output = &*String::from_utf8_lossy(&code_output);
 
-        if let Some(window) = web_sys::window() {
-            if let Some(document) = window.document() {
-                if let Some(head) = document.head() {
-                    let elem = document.create_element("script")?;
-                    //console_log!("OUTPUT: {:?}", output);
-                    elem.set_inner_html(output);
-                    head.append_child(&elem)?;
-                } else {
-                    console_log!("document head not found");
-                    
-                }
-            } else {
-                console_log!("could not get document");
-            }
-        } else {
-            console_log!("could not get window");
-        }
-        Ok(())
+        let keyid = keyid::new();
+
+        let window = web_sys::window().ok_or(Error::InvalidWindow)?;
+        let document = window.document().ok_or(Error::InvalidDocument)?;
+        let head = document.head().ok_or(Error::InvalidHead)?;
+        let elem = document.create_element("script")?;
+        elem.set_inner_html(format!("define({}, {}", keyid, &output[7..]).as_str());
+        head.append_child(&elem)?;
+
+        Ok(keyid)
     })
 }
 
@@ -136,7 +138,7 @@ fn transpile(filename: &str, input: &str) -> Result<()> {
 pub fn main(filename: &str, input: &str) -> std::result::Result<JsValue, JsValue> {
     match transpile(filename, input) {
         Err(e) => Err(JsValue::from_str(format!("{:?}", e).as_str())),
-        Ok(()) => Ok(JsValue::NULL),
+        Ok(keyid) => Ok(JsValue::from_f64(keyid as f64)),
     }
 }
 

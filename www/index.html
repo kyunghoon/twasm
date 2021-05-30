@@ -6,6 +6,21 @@
     <title>TSWasm Example</title>
     <script type="module">
         import { ts_entrypoint } from '../pkg/twasm.js';
+        window.define = function(imps, next) {
+            if (imps.length == 0 || imps.length == 1 && imps[0] == 'exports') {
+                console.log('start');
+                next({});
+            } else {
+                // wire up imports
+                const test = xx => {
+                    return 'faked: test.ts test called with:' + xx;
+                };
+                Promise.all(imps.map(imp => ts_import(`${imps}.ts`))).then(_ => {
+                    next({ test });
+                });
+            }
+        };
+        window.define.amd = true;
         ts_entrypoint('index.ts');
     </script>
 </head>

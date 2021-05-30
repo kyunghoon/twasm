@@ -1,5 +1,3 @@
 export const test = (xx: string) => {
-    return 'test called:' + xx
+    return 'test.ts test called with:' + xx
 }
-
-console.log('>>>>');

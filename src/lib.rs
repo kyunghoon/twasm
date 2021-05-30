@@ -115,7 +115,7 @@ fn transpile(filename: &str, input: &str) -> Result<()> {
             if let Some(document) = window.document() {
                 if let Some(head) = document.head() {
                     let elem = document.create_element("script")?;
-                    console_log!("OUTPUT: {:?}", output);
+                    //console_log!("OUTPUT: {:?}", output);
                     elem.set_inner_html(output);
                     head.append_child(&elem)?;
                 } else {

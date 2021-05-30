@@ -20,6 +20,7 @@ swc_ecma_transforms_base = "0.15.5"
 swc_ecma_transforms_module = "0.17.0"
 swc_ecma_transforms_typescript = "0.19.3"
 swc_ecma_utils = "0.36.0"
+fxhash = "0.2.1"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

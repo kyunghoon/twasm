@@ -943,6 +943,7 @@ name = "twasm"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "fxhash",
  "swc_common",
  "swc_ecma_codegen",
  "swc_ecma_parser",

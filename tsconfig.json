@@ -6,5 +6,6 @@
         "strictFunctionTypes": true,
         "sourceMap": true,
         "strict": true,
+        "lib": ["ES2015", "DOM"]
     }
 }

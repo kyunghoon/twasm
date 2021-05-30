@@ -1,3 +1,5 @@
-export const test = (xx: number) => {
-    console.log('test called', xx);
+export const test = (xx: string) => {
+    return 'test called:' + xx
 }
+
+console.log('>>>>');

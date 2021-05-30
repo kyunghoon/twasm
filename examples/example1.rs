@@ -1,45 +1,16 @@
-pub fn set_panic_hook() {
-    // When the `console_error_panic_hook` feature is enabled, we can call the
-    // `set_panic_hook` function at least once during initialization, and then
-    // we will get better error messages if our code ever panics.
-    //
-    // For more details see
-    // https://github.com/rustwasm/console_error_panic_hook#readme
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-}
-
 use std::{io::Write, path::PathBuf, sync::{Arc, RwLock}};
 use swc_ecma_parser::{Capturing, JscTarget, Parser, StringInput, Syntax, TsConfig, lexer::Lexer};
 use swc_common::{FileName, Mark, SourceMap, errors::{ColorConfig, Handler}, sync::Lrc};
 use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
-
 use swc_ecma_visit::FoldWith;
-use wasm_bindgen::prelude::*;
-
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-    fn alert(s: &str);
-    fn eval(s: &str);
-}
-
-macro_rules! console_log { ($($t:tt)*) => (#[allow(unused_unsafe)] unsafe { log(&format_args!($($t)*).to_string()) }) }
 
 #[derive(Debug)]
 enum Error {
-    JSError(JsValue),
     ECMAParseError(swc_ecma_parser::error::Error),
     IOError(std::io::Error),
     PoisonError(String),
     DiagnosticEmitted,
 }
-impl From<JsValue> for Error { fn from(e: JsValue) -> Error { Error::JSError(e) } }
 impl From<std::io::Error> for Error { fn from(e: std::io::Error) -> Error { Error::IOError(e) } }
 impl From<swc_ecma_parser::error::Error> for Error { fn from(e: swc_ecma_parser::error::Error) -> Error { Error::ECMAParseError(e) } }
 impl<T> From<std::sync::PoisonError<T>> for Error { fn from(e: std::sync::PoisonError<T>) -> Error { Error::PoisonError(e.to_string()) } }
@@ -58,7 +29,7 @@ impl Write for Buf {
     }
 }
 
-fn transpile(filename: &str, input: &str) -> Result<()> {
+fn transpile(filename: &str, input: &str) -> Result<String> {
     swc_common::GLOBALS.set(&swc_common::Globals::new(), || {
         let cm: Lrc<SourceMap> = Default::default();
         let handler = Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
@@ -109,64 +80,49 @@ fn transpile(filename: &str, input: &str) -> Result<()> {
         };
 
         let code_output = wr.0.read()?;
-        let output = &*String::from_utf8_lossy(&code_output);
+        let output = String::from_utf8_lossy(&code_output).to_string();
 
-        if let Some(window) = web_sys::window() {
-            if let Some(document) = window.document() {
-                if let Some(head) = document.head() {
-                    let elem = document.create_element("script")?;
-                    console_log!("OUTPUT: {:?}", output);
-                    elem.set_inner_html(output);
-                    head.append_child(&elem)?;
-                } else {
-                    console_log!("document head not found");
-                    
-                }
-            } else {
-                console_log!("could not get document");
-            }
-        } else {
-            console_log!("could not get window");
-        }
-        Ok(())
+        Ok(output)
     })
 }
 
-#[wasm_bindgen]
-pub fn main(filename: &str, input: &str) -> std::result::Result<JsValue, JsValue> {
-    match transpile(filename, input) {
-        Err(e) => Err(JsValue::from_str(format!("{:?}", e).as_str())),
-        Ok(()) => Ok(JsValue::NULL),
+fn main() {
+    let input = "let x = (y: string) => console.log('hello world');";
+    match transpile("index.ts", input) {
+        Err(e) => println!("{:?}", e),
+        Ok(output) => {
+            println!("{}", output);
+        }
     }
 }
 
 /*
-use web_sys::{RequestMode, RequestInit};
+(function(global, factory) {
+    if (typeof define === "function" && define.amd) {
+        define([
+            "./test"
+        ], factory);
+    } else if (typeof exports !== "undefined") {
+        factory(require("./test"));
+    } else {
+        var mod = {
+            exports: {
+            }
+        };
+        factory(global.test);
+        global.index = mod.exports;
+    }
+})(this, function(_test) {
+    "use strict";
+    alert((0, _test).test('a'));
+});
 
-#[wasm_bindgen]
-pub fn entrypoint(tspath: &str) {
-    let mut opts = RequestInit::new();
-    opts.method("GET");
-    opts.mode(RequestMode::Cors);
+>===========>
 
-    let request = web_sys::Request::new_with_str_and_init(tspath, &opts).expect("failed to create request");
-
-    let cb = Closure::once(move |result: JsValue| {
-        if let Some(input) = result.as_string() {
-            main(input.as_str());
-        } else {
-            unsafe { console_log!("unexpected js result {:?}", result) };
-        }
-    });
-
-    let er = Closure::once(move |_: JsValue| {
-        unsafe { console_log!("entrypoint ts file not found") };
-    });
-
-    request.text().expect("failed to get text").then(&cb).catch(&er);
-
-    // https://stackoverflow.com/questions/53214434/how-to-return-a-rust-closure-to-javascript-via-webassembly/53219594#53219594
-    cb.forget();
-    er.forget();
-}
+(function(global, factory) {
+    ts_import('./test.ts').then(() => factory(test)).catch(console.error);
+})(this, function(_test) {
+    "use strict";
+    alert((0, _test).test('a'));
+});
 */

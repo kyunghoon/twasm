@@ -16,7 +16,10 @@ swc_ecma_parser = "0.57.2"
 swc_common = {version = "0.10.20", features = ["tty-emitter"]}
 swc_ecma_codegen = "0.55.3"
 swc_ecma_visit = "0.31.0"
+swc_ecma_transforms_base = "0.15.5"
+swc_ecma_transforms_module = "0.17.0"
 swc_ecma_transforms_typescript = "0.19.3"
+swc_ecma_utils = "0.36.0"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

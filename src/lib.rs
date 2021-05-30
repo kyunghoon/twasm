@@ -1,3 +1,14 @@
+pub fn set_panic_hook() {
+    // When the `console_error_panic_hook` feature is enabled, we can call the
+    // `set_panic_hook` function at least once during initialization, and then
+    // we will get better error messages if our code ever panics.
+    //
+    // For more details see
+    // https://github.com/rustwasm/console_error_panic_hook#readme
+    #[cfg(feature = "console_error_panic_hook")]
+    console_error_panic_hook::set_once();
+}
+
 use std::{io::Write, sync::{Arc, RwLock}};
 use swc_ecma_parser::{Capturing, JscTarget, Parser, StringInput, Syntax, TsConfig, lexer::Lexer};
 use swc_common::{FileName, SourceMap, errors::{ColorConfig, Handler}, sync::Lrc};
@@ -9,17 +20,6 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-pub fn set_panic_hook() {
-    // When the `console_error_panic_hook` feature is enabled, we can call the
-    // `set_panic_hook` function at least once during initialization, and then
-    // we will get better error messages if our code ever panics.
-    //
-    // For more details see
-    // https://github.com/rustwasm/console_error_panic_hook#readme
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-}
 
 #[wasm_bindgen]
 extern "C" {
@@ -45,13 +45,13 @@ impl Write for Buf {
     }
 }
 
-fn eval_ts(filename: &str, contents: &str) -> Result<JsValue, JsValue> {
+fn eval_ts(filename: &str, input: &str) -> Result<JsValue, JsValue> {
     let cm: Lrc<SourceMap> = Default::default();
     let handler = Handler::with_tty_emitter(ColorConfig::Auto, true, false, Some(cm.clone()));
 
     let source = cm.new_source_file(
         FileName::Custom(filename.to_owned()),
-        contents.to_owned(),
+        input.to_owned(),
     );
 
     let lexer = Lexer::new(
@@ -107,8 +107,8 @@ fn eval_ts(filename: &str, contents: &str) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
-pub fn main(input: &str) -> Result<JsValue, JsValue> {
-    eval_ts("index.ts", input)?;
+pub fn main(filename: &str, input: &str) -> Result<JsValue, JsValue> {
+    eval_ts(filename, input)?;
     Ok(JsValue::NULL)
 }
 

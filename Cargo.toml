@@ -1,5 +1,5 @@
 [package]
-name = "tswasm"
+name = "twasm"
 version = "0.1.0"
 authors = ["kyunghoon"]
 edition = "2018"

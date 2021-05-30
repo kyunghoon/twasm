@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <title>TSWasm Example</title>
     <script type="module">
-        import init, { main } from '../pkg/tswasm.js';
-        init().then(() => fetch('index.ts')).then(d => d.text()).then(main);
+        import { ts_entrypoint } from '../pkg/twasm.js';
+        ts_entrypoint('index.ts');
     </script>
 </head>
 
